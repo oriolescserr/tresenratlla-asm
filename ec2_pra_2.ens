@@ -1,0 +1,890 @@
+; ---------------------------------------------------------------
+; Nom alumne: Oriol Escolà Serra
+; Grup Pràctiques: Pralab1
+; ---------------------------------------------------------------
+
+TECLAT EQU 0B000h
+PANTALLA EQU 0A000h
+ORIGEN 0h
+INICIO ini
+.PILA 100
+
+.DATOS
+
+fila1 VALOR 0,0,0
+fila2 VALOR 0,0,0
+fila3 VALOR 0,0,0
+
+missatge_nom_jugador1 VALOR "PRIMER NOM:"
+fi_missatge_nom_jugador1 VALOR 0
+missatge_nom_jugador2 VALOR "SEGON "
+fi_missatge_nom_jugador2 VALOR 0
+missatge_espai VALOR "Espai en acabar"
+fi_missatge_espai VALOR 0
+nom_jugador1 VALOR 10 VECES ' '
+fi_nom_jugador1 VALOR 0
+nom_jugador2 VALOR 10 VECES ' '
+fi_nom_jugador2 VALOR 0
+missatge_num_caselles VALOR "123"
+fi_missatge_num_caselles VALOR 0
+missatge_escriu VALOR "Escriu"
+fi_missatge_escriu VALOR 0
+missatge_fila VALOR "FIL:"
+fi_missatge_fila VALOR 0
+missatge_error_fila VALOR "FILA INVALIDA"
+fi_missatge_error_fila VALOR 0
+missatge_error_columna VALOR "COL. INVALIDA"
+fi_missatge_error_columna VALOR 0
+missatge_error_posicio VALOR "ESPAI OCUPAT!"
+fi_missatge_error_posicio VALOR 0
+missatge_error_eliminar VALOR "             "
+fi_missatge_error_eliminar VALOR 0
+missatge_columna VALOR "COL:"
+fi_missatge_columna VALOR 0
+missatge_torn VALOR "TORN"
+fi_missatge_torn VALOR 0
+missatge_empat VALOR "HEU EMPATAT"
+fi_missatge_empat VALOR 0
+missatge_nova_partida VALOR "Una altra ?"
+fi_missatge_nova_partida VALOR 0
+missatge_confirmacio VALOR "(y/N)"
+fi_missatge_confirmacio VALOR 0
+missatge_felicitats VALOR "FELICITATS"
+fi_missatge_felicitats VALOR 0
+
+.CODIGO
+
+ini:
+
+    MOVH R6, BYTEALTO PANTALLA  ; Com que s'utilitza bastant es quedarà a R6 per fàcil recuperació
+    MOVL R6, BYTEBAJO PANTALLA
+
+    preguntar_nom_jugador1:
+
+        MOVH R0, BYTEALTO DIRECCION esborrar_pantalla
+        MOVL R0, BYTEBAJO DIRECCION esborrar_pantalla
+        CALL R0
+        MOVH R0, BYTEALTO DIRECCION neteja_teclat
+        MOVL R0, BYTEBAJO DIRECCION neteja_teclat
+        CALL R0
+
+        MOV R0, R6 ; Mou a R0 la direcció de la pantalla
+        MOVH R1, BYTEALTO DIRECCION missatge_nom_jugador1
+        MOVL R1, BYTEBAJO DIRECCION missatge_nom_jugador1
+        MOVH R2, 00
+        MOVL R2, 17 ; 1 * 15 + 2
+        ADD R0, R0, R2
+        CALL escriure_text ; La funció escriu el que hi ha a R1 a la pos R0
+        MOV R0, R6
+        MOVH R1, BYTEALTO DIRECCION missatge_espai
+        MOVL R1, BYTEBAJO DIRECCION missatge_espai
+        MOVH R2, 00
+        MOVL R2, 30 ; 2 * 15 + 0
+        ADD R0, R0, R2
+        CALL escriure_text
+        CALL espai_blanc
+        MOVH R1, BYTEALTO DIRECCION nom_jugador1
+        MOVL R1, BYTEBAJO DIRECCION nom_jugador1
+        CALL guardar_nom_R1 ; Crides la funció indicant que ho guardes a nom_jugador1
+    
+    preguntar_nom_jugador2:
+
+        MOV R0, R6
+        MOVH R1, BYTEALTO DIRECCION missatge_nom_jugador2
+        MOVL R1, BYTEBAJO DIRECCION missatge_nom_jugador2
+        MOVH R2, 00
+        MOVL R2, 17 ; 1 * 15 + 2
+        ADD R0, R0, R2
+        CALL escriure_text ; La funció escriu el que hi ha a R1 a la pos R0
+        CALL espai_blanc
+        MOVH R1, BYTEALTO DIRECCION nom_jugador2
+        MOVL R1, BYTEBAJO DIRECCION nom_jugador2
+        CALL guardar_nom_R1
+        JMP pintar_fons_caselles
+
+    espai_blanc: ; Caselles on es podrà escriure el nom
+
+        MOV R0, R6
+        MOVH R1, 0110000b
+        MOVL R1, 0000000b
+        MOVH R2, 00
+        MOVL R2, 77 ; 5 * 15 + 2
+        ADD R0, R0, R2
+        MOVH R3, 00
+        MOVL R3, 10 ; Num. màxim de caràcters
+
+        bucle_espai_blanc:
+            MOV [R0], R1
+            INC R0
+            DEC R3
+            BRNZ bucle_espai_blanc
+        RET
+    
+    guardar_nom_R1: ; Mostra per pantalla i guarda a R1 el nom que posa l'usuari (espai per acabar o si sobrepassa de 10 caràcters)
+        
+        MOV R0, R6
+        MOVH R2, 00
+        MOVL R2, 77 ; 5 * 15 + 12
+        ADD R0, R0, R2
+        MOVH R4, 00
+        MOVL R4, 10 ; Num. màxim de caràcters
+        MOVH R5, 32h ; Tecla espai
+        MOVL R5, 20h
+
+        guardar_lletra:
+            PUSH R0
+            PUSH R1
+            MOVH R2, BYTEALTO DIRECCION llegir_fila
+            MOVL R2, BYTEBAJO DIRECCION llegir_fila
+            CALL R2 ; S'aprofita la funció
+            POP R1
+            POP R0
+            COMP R3, R5 ; la funció llegir_fila guarda el valor a R3
+            BRZ return
+            MOV R2, R3
+            MOVH R3, 00110000b
+            MOV [R0], R3
+            MOV [R1], R3
+            INC R0
+            INC R1
+            DEC R4
+            BRNZ guardar_lletra
+
+        return:
+            RET
+            
+    pintar_fons_caselles: ; Mostra les caselles del tauler
+
+        CALL esborrar_pantalla
+        CALL neteja_teclat
+
+        MOV R0, R6
+        
+        MOVH R1, 0000h
+        MOVL R1, 0003h ; Comptador columnes
+        
+        MOVH R2, 0000h 
+        MOVL R2, 0003h ; Comptador files
+
+        MOVH R3, 00
+        MOVL R3, 66 ; 4 * 15 + 6
+        ADD R0, R0, R3
+
+        fons_fila:
+            MOVH R3, 0110000b
+            MOVL R3, 0000000b
+            MOV [R0], R3
+            INC R0
+            DEC R1
+            BRNZ fons_fila
+
+            MOVL R1, 0003h 
+            MOVH R4, 00
+            MOVL R4, 15
+            SUB R0, R0, R1 ; R0 - 3 (tornes a l'inici de les columnes)
+            ADD R0, R0, R4 ; R0 + 15 (passes a la següent fila)
+            DEC R2
+            BRNZ fons_fila
+        
+    escriure_nombres: ; Escriu els nombres del tauler
+
+        MOV R0, R6
+        MOVH R1, BYTEALTO DIRECCION missatge_num_caselles
+        MOVL R1, BYTEBAJO DIRECCION missatge_num_caselles
+        MOVH R2, 00
+        MOVL R2, 51 ; 3 * 15 + 6
+        ADD R0, R0, R2
+        CALL escriure_text
+
+        MOV R0, R6
+        MOVH R1, BYTEALTO DIRECCION missatge_num_caselles
+        MOVL R1, BYTEBAJO DIRECCION missatge_num_caselles
+        MOVH R2, 00
+        MOVL R2, 65 ; 4 * 15 + 5
+        ADD R0, R0, R2
+
+        nombres_files:
+            MOV R2, [R1] 
+            OR R2, R2 , R2 ; Mirar si és final de missatge
+            BRZ fi_nombres_files
+            MOVH R2, 00000111b 
+            MOV [R0], R2 
+            ADD R0, R0, R4 ; Li suma 15 per saltar de línia
+            INC R1
+            JMP nombres_files
+            
+        fi_nombres_files:
+            JMP main
+
+    escriure_text: ; La funció escriu el que hi ha a R1 a la pos R0
+
+            MOV R2, [R1] 
+            OR R2, R2 , R2 ; Mirar si és final de missatge
+            BRZ fi_escriure_text
+
+            MOVH R2, 00000111b 
+            MOV [R0], R2 
+            INC R0 
+            INC R1
+            JMP escriure_text
+        
+        fi_escriure_text:
+            RET
+
+    esborrar_pantalla:
+
+        MOV R0, R6
+        MOVH R1, 00h
+        MOVL R1, 120
+        ADD R0, R0, R1
+        MOVH R1, 11111111b
+        MOVL R1, 11111111b
+        MOV [R0], R1
+        RET
+
+    neteja_teclat:
+
+        MOVH R1, BYTEALTO TECLAT
+        MOVL R1, BYTEBAJO TECLAT
+        INC R1
+        MOVH R2, 00h
+        MOVL R2, 00000100b
+        MOV [R1],R2
+        RET
+
+    main:
+
+        MOV R0, R6
+        MOVH R1 , BYTEALTO DIRECCION missatge_torn
+        MOVL R1 , BYTEBAJO DIRECCION missatge_torn
+        CALL escriure_text
+    
+        MOV R0, R6
+        MOVH R1 , BYTEALTO DIRECCION missatge_escriu
+        MOVL R1 , BYTEBAJO DIRECCION missatge_escriu
+        MOVH R2, 00
+        MOVL R2, 15 ; 1 * 15 + 0
+        ADD R0, R0, R2
+        CALL escriure_text
+
+        bucle_main:
+
+            MOV R0, R6
+            MOVH R1 , BYTEALTO DIRECCION nom_jugador1
+            MOVL R1 , BYTEBAJO DIRECCION nom_jugador1
+            MOVH R2, 0000h
+            MOVL R2, 0005h
+            ADD R0, R0, R2
+            CALL escriure_text
+            
+            CALL preguntar_posicions
+
+            MOVH R1, 00110000b 
+            MOVL R1, 'X'
+            MOVH R5, 0000h
+            MOVL R5, 0001h 
+            CALL dibuixar_R1 ; Dibuixa el que hi ha a R1 a la casella indicada per les altres funcions i guarda a la memòria per fàcil comprovació
+            MOVH R0, BYTEALTO DIRECCION verificar_guanyador
+            MOVL R0, BYTEBAJO DIRECCION verificar_guanyador
+            CALL R0
+
+            MOVH R0, BYTEALTO DIRECCION verificar_tauler_ple
+            MOVL R0, BYTEBAJO DIRECCION verificar_tauler_ple
+            CALL R0
+        
+            MOV R0, R6
+            MOVH R1 , BYTEALTO DIRECCION nom_jugador2
+            MOVL R1 , BYTEBAJO DIRECCION nom_jugador2
+            MOVH R2, 0000h
+            MOVL R2, 0005h
+            ADD R0, R0, R2
+            CALL escriure_text 
+            
+            CALL preguntar_posicions
+
+            MOVH R1, 00110000b
+            MOVL R1, 'O'
+            MOVH R5, 0000h
+            MOVL R5, 0005h 
+            CALL dibuixar_R1
+            MOVH R0, BYTEALTO DIRECCION verificar_guanyador
+            MOVL R0, BYTEBAJO DIRECCION verificar_guanyador
+            CALL R0
+
+            JMP bucle_main
+
+    preguntar_posicions:
+
+            MOV R0, R6
+            MOVH R1 , BYTEALTO DIRECCION missatge_fila
+            MOVL R1 , BYTEBAJO DIRECCION missatge_fila
+            MOVH R2, 00
+            MOVL R2, 22 ; 1 * 15 + 8
+            ADD R0, R0, R2
+            CALL escriure_text
+
+            CALL eliminar_nombre
+            CALL llegir_fila
+            CALL escriure_fila
+            MOVH R0, BYTEALTO DIRECCION verificar_fila_valida
+            MOVL R0, BYTEBAJO DIRECCION verificar_fila_valida
+            CALL R0
+            XOR R0, R0, R0
+            COMP R0, R5 ; Si la funció verificar_fila_valida retorna 0 a R5 no hi ha error
+            BRNZ -9 ; Si no és vàlida torna a preguntar
+
+            MOV R0, R6
+            MOVH R1 , BYTEALTO DIRECCION missatge_columna
+            MOVL R1 , BYTEBAJO DIRECCION missatge_columna
+            MOVH R2, 00
+            MOVL R2, 22 ; 1 * 15 + 8
+            ADD R0, R0, R2
+            CALL escriure_text
+
+            CALL eliminar_nombre
+            CALL llegir_columna
+            CALL escriure_columna
+            MOVH R0, BYTEALTO DIRECCION verificar_columna_valida
+            MOVL R0, BYTEBAJO DIRECCION verificar_columna_valida
+            CALL R0
+            XOR R0, R0, R0
+            COMP R0, R5 ; Si la funció verificar_columna_valida retorna 0 a R5 no hi ha error
+            BRNZ -9 ; Si no és vàlida torna a preguntar
+
+            MOVH R0, BYTEALTO DIRECCION verificar_posicio
+            MOVL R0, BYTEBAJO DIRECCION verificar_posicio
+            CALL R0
+            XOR R0, R0, R0
+            COMP R0, R5 ; Si la funció verificar_posició retorna 0 a R5 no hi ha error
+            BRNZ -38 ; Si no és vàlida torna a preguntar
+
+            RET
+
+    llegir_fila: ; El que escrius per teclat ho guarda a R3
+
+        MOVH R0, BYTEALTO TECLAT
+        MOVL R0, BYTEBAJO TECLAT
+
+        MOV R1, R0 ; R1: Adreça registre control
+        INC R1
+
+        MOVH R2, 00000001b
+        MOVL R2, 00000000b
+
+        no_tecla:
+            MOV R3, [R1] ; Consultem el teclat accedint a R1: Registre control
+            MOVL R3, 00000000b
+            COMP R3, R2
+            BRNZ no_tecla
+            
+        MOV R3, [R0] 
+        RET
+
+    llegir_columna: ; El que escrius per teclat ho guarda a R4
+
+        MOVH R0, BYTEALTO TECLAT
+        MOVL R0, BYTEBAJO TECLAT
+
+        MOV R1, R0 ; R1: Adreça registre control
+        INC R1
+
+        MOVH R2, 00000001b
+        MOVL R2, 00000000b
+
+        no_tecla_2:
+            MOV R4, [R1] ; Consultem el teclat accedint a R1: Registre control
+            MOVL R4, 00000000b
+            COMP R4, R2
+            BRNZ no_tecla_2
+            
+        MOV R4, [R0]  
+        RET  
+
+    eliminar_nombre: ; Treu el nombre que indica la fila o columna que l'usuari ha posat
+
+        MOV R0, R6
+        MOVH R2, 00
+        MOVL R2, 27 ; 1 * 15 + 12
+        ADD R0, R0, R2
+        
+        MOVL R2, 00000000b
+        MOVH R2, 00000111b
+        MOV [R0], R2
+        RET
+
+    escriure_fila: ; Escriu la fila que l'usuari ha dit i que el programa ha guardat a R3
+
+        MOV R0, R6
+
+        MOVH R2, 00
+        MOVL R2, 27 ; 1 * 15 + 12
+        ADD R0, R0, R2
+        
+        MOV R2, R3
+        MOVH R2, 00000111b
+        MOV [R0], R2
+        RET
+
+    escriure_columna: ; Escriu la columna que l'usuari ha dit i que el programa ha guardat a R4
+
+        MOV R0, R6
+
+        MOVH R2, 00
+        MOVL R2, 27 ; 1 * 15 + 12
+        ADD R0, R0, R2
+        
+        MOV R2, R4
+        MOVH R2, 00000111b
+        MOV [R0], R2
+        RET
+
+    dibuixar_R1: ; Dibuixa el que hi ha a R1 a la casella indicada per les altres funcions i guarda a la memòria per fàcil comprovació
+
+        MOV R0, R6
+        MOVH R2, 00
+        MOVL R2, 50 ; 3 * 15 + 5
+        ADD R0, R0, R2
+
+        PUSH R3
+
+        ADD R0, R0, R4 ; Li sumes la posició en l'eix x
+        MOVH R2, 00 ; Li vas sumant 15 per arribar a la posició en l'eix y que necessites
+        MOVL R2, 15
+        multx15:
+            ADD R0, R0, R2
+            DEC R3
+            BRNZ multx15
+
+        MOV [R0], R1
+
+        MOVH R0, BYTEALTO DIRECCION fila1 ; Escriure a la memòria
+        MOVL R0, BYTEBAJO DIRECCION fila1
+        POP R3
+
+        DEC R4 ; Perquè comencin a partir de 0
+        ADD R0, R0, R4
+
+        DEC R3
+        BRZ substituir ; Per evitar problemes al multiplicar per 0
+
+        MOVH R2, 00 ; Li vas sumant 3 per arribar a la posició en l'eix y que necessites
+        MOVL R2, 03
+        multx3:
+            ADD R0, R0, R2
+            DEC R3
+            BRNZ multx3
+
+        substituir:
+            MOV [R0], R5
+
+        RET
+
+    verificar_fila_valida: ; S'assegura que la fila que ha posat l'usuari és vàlida
+
+        PUSH R1
+        MOVH R3, 0000h
+        MOVH R1, 0000h
+        MOVL R1, 0030h
+        SUB R3, R3, R1 ; Passa de ASCII a decimal
+
+        MOVL R1, 0001h
+        COMP R3, R1
+        BRZ fila_valida
+        INC R1
+        COMP R3, R1
+        BRZ fila_valida
+        INC R1
+        COMP R3, R1
+        BRZ fila_valida
+        POP R1
+
+        fila_no_valida:
+            MOV R0, R6
+            MOVH R1 , BYTEALTO DIRECCION missatge_error_fila
+            MOVL R1 , BYTEBAJO DIRECCION missatge_error_fila
+            MOVH R2, 00
+            MOVL R2, 106 ; 7 * 15 + 1
+            ADD R0, R0, R2
+            MOVH R2, BYTEALTO DIRECCION escriure_text
+            MOVL R2, BYTEBAJO DIRECCION escriure_text
+            CALL R2
+            CALL eliminar_error
+            MOVH R0, BYTEALTO DIRECCION eliminar_nombre
+            MOVL R0, BYTEBAJO DIRECCION eliminar_nombre
+            MOVH R5, 0000h
+            MOVL R5, 0001h
+            CALL R0
+            RET
+
+        fila_valida:
+            MOVH R5, 0000h
+            MOVL R5, 0000h
+            POP R1
+            RET
+
+    verificar_columna_valida: ; S'assegura que la columna que ha posat l'usuari és vàlida
+
+        PUSH R1
+        MOVH R4, 0000h
+        MOVH R1, 0000h
+        MOVL R1, 0030h
+        SUB R4, R4, R1 ; Passa de ASCII a decimal
+
+        MOVL R1, 0001h
+        COMP R4, R1
+        BRZ columna_valida
+        INC R1
+        COMP R4, R1
+        BRZ columna_valida
+        INC R1
+        COMP R4, R1
+        BRZ columna_valida
+        POP R1
+
+        columna_no_valida:
+            MOV R0, R6
+            MOVH R1 , BYTEALTO DIRECCION missatge_error_columna
+            MOVL R1 , BYTEBAJO DIRECCION missatge_error_columna
+            MOVH R2, 00
+            MOVL R2, 106 ; 7 * 15 + 1
+            ADD R0, R0, R2
+            MOVH R2, BYTEALTO DIRECCION escriure_text
+            MOVL R2, BYTEBAJO DIRECCION escriure_text
+            CALL R2
+            CALL eliminar_error
+            MOVH R5, 0000h
+            MOVL R5, 0001h
+            RET
+
+        columna_valida:
+            MOVH R5, 0000h
+            MOVL R5, 0000h
+            POP R1
+            RET
+
+    verificar_posicio: ; S'assegura que la posició que ha posat l'usuari no hi ha una altre X o O
+
+        MOVH R0, BYTEALTO DIRECCION fila1
+        MOVL R0, BYTEBAJO DIRECCION fila1
+
+        PUSH R3
+        PUSH R4
+
+        DEC R4 ; Perquè comencin a partir de 0
+        ADD R0, R0, R4
+        DEC R3
+        BRZ comprovar ; Per evitar problemes al multiplicar per 0
+
+        MOVH R2, 00 ; Li vas sumant 3 per arribar a la posició en l'eix y que necessites
+        MOVL R2, 03
+        multx3_2:
+            ADD R0, R0, R2
+            DEC R3
+            BRNZ multx3_2
+        comprovar:
+            XOR R1, R1, R1
+            MOV R0, [R0]
+            COMP R0, R1
+            BRZ posicio_valida
+        
+        posicio_no_valida:
+            MOV R0, R6
+            MOVH R1 , BYTEALTO DIRECCION missatge_error_posicio
+            MOVL R1 , BYTEBAJO DIRECCION missatge_error_posicio
+            MOVH R2, 00
+            MOVL R2, 106 ; 7 * 15 + 1
+            ADD R0, R0, R2
+            MOVH R2, BYTEALTO DIRECCION escriure_text
+            MOVL R2, BYTEBAJO DIRECCION escriure_text
+            CALL R2
+            CALL eliminar_error
+            MOVH R5, 0000h
+            MOVL R5, 0001h
+            POP R4
+            POP R3
+            RET
+
+        posicio_valida:
+            MOVH R5, 0000h
+            MOVL R5, 0000h
+            POP R4
+            POP R3
+            RET
+
+    eliminar_error: ; Treu el missatge d'error de fila, columna i de posició
+
+        MOV R0, R6
+        MOVH R1 , BYTEALTO DIRECCION missatge_error_eliminar
+        MOVL R1 , BYTEBAJO DIRECCION missatge_error_eliminar
+        MOVH R2, 00
+        MOVL R2, 106 ; 7 * 15 + 1
+        ADD R0, R0, R2
+        MOVH R2, BYTEALTO DIRECCION escriure_text
+        MOVL R2, BYTEBAJO DIRECCION escriure_text
+        CALL R2
+        RET
+        
+    verificar_tauler_ple: ; S'assegura que el tauler no està ple, i si ho està, diu que han empatat
+
+        MOVH R0, BYTEALTO DIRECCION fila1
+        MOVL R0, BYTEBAJO DIRECCION fila1
+
+        MOVH R1, 00
+        MOVL R1, 10       
+
+        XOR R3, R3, R3
+
+        bucle_comprovacio_ple:
+            MOV R2, [R0] ; Llegeix la casella actual
+            COMP R2, R3
+            BRZ no_ple ; Si està buida (zero), no està ple
+            INC R0 ; Passa a la següent casella
+            DEC R1 ; Decrementa comptador
+            BRNZ bucle_comprovacio_ple ; Continua si encara queden caselles
+
+        JMP mostrar_empat ; Totes plenes --> empat
+
+        no_ple:
+            RET
+
+    verificar_guanyador: ; Es comprova si algú ha guanyat
+
+        comprovar_files:
+
+            MOVH R0, BYTEALTO DIRECCION fila1
+            MOVL R0, BYTEBAJO DIRECCION fila1
+
+            MOVH R1, 0000h
+            MOVL R1, 0003h
+            PUSH R1
+
+            MOVH R2, 00
+            MOVL R2, 03 ; Si la suma dona 3 ha guanyat el jugador 1
+            MOVH R3, 00
+            MOVL R3, 15 ; Si la suma dona 15 ha guanyat el jugador 2
+
+            bucle_comprovacio_files:
+                XOR R4, R4, R4
+                MOV R5, [R0]
+                ADD R4, R4, R5
+                INC R0
+                MOV R5, [R0]
+                ADD R4, R4, R5
+                INC R0
+                MOV R5, [R0]
+                ADD R4, R4, R5
+                INC R0
+                COMP R4, R2
+                BRZ jugador1_guanyador
+                COMP R4, R3
+                BRZ jugador2_guanyador
+                DEC R1
+                BRNZ bucle_comprovacio_files
+           
+        comprovar_columnes:
+
+            MOVH R0, BYTEALTO DIRECCION fila1
+            MOVL R0, BYTEBAJO DIRECCION fila1
+            POP R1
+            PUSH R1
+
+            bucle_comprovacio_columnes:
+                PUSH R0
+                XOR R4, R4, R4
+                MOV R5, [R0]
+                ADD R4, R4, R5
+                ADD R0, R0, R2 ; + 3
+                MOV R5, [R0]
+                ADD R4, R4, R5
+                ADD R0, R0, R2
+                MOV R5, [R0]
+                ADD R4, R4, R5
+                POP R0 ; Reinicies columna
+                INC R0 ; Passa a la següent columna
+                COMP R4, R2
+                BRZ jugador1_guanyador
+                COMP R4, R3
+                BRZ jugador2_guanyador
+                DEC R1
+                BRNZ bucle_comprovacio_columnes
+
+        comprovar_diagonals:
+
+            MOVH R0, BYTEALTO DIRECCION fila1
+            MOVL R0, BYTEBAJO DIRECCION fila1
+            POP R1
+            PUSH R1
+            XOR R4, R4, R4
+
+            primera_diagonal:
+                MOV R5, [R0]
+                ADD R4, R4, R5
+                INC R0 ; +1 Següent columna
+                ADD R0, R0, R2 ; +3 Següent fila
+                DEC R1
+                BRNZ primera_diagonal
+
+            COMP R4, R2
+            BRZ jugador1_guanyador
+            COMP R4, R3
+            BRZ jugador2_guanyador
+
+            MOVH R0, BYTEALTO DIRECCION fila1
+            MOVL R0, BYTEBAJO DIRECCION fila1
+            POP R1
+            DEC R2
+            ADD R0, R0, R2 ; pos+2
+            XOR R4, R4, R4
+
+            segona_diagonal:
+                MOV R5, [R0]
+                ADD R4, R4, R5
+                ADD R0, R0, R2 ; Següent fila, -1 columna
+                DEC R1
+                BRNZ segona_diagonal
+
+            INC R2 ; Recuperes el 3
+            COMP R4, R2
+            BRZ jugador1_guanyador
+            COMP R4, R3
+            BRZ jugador2_guanyador
+
+         RET
+
+    mostrar_empat: ; Mostra per pantalla que han empatat i pregunta si volen tornar a jugar
+
+        MOVH R0, BYTEALTO DIRECCION esborrar_pantalla
+        MOVL R0, BYTEBAJO DIRECCION esborrar_pantalla
+        CALL R0
+
+        MOV R0, R6
+        MOVH R1 , BYTEALTO DIRECCION missatge_empat
+        MOVL R1 , BYTEBAJO DIRECCION missatge_empat
+        MOVH R2, 00
+        MOVL R2, 32 ; 2 * 15 + 2
+        ADD R0, R0, R2
+        MOVH R3, BYTEALTO DIRECCION escriure_text
+        MOVL R3, BYTEBAJO DIRECCION escriure_text
+        CALL R3
+        CALL tornar_jugar
+
+    jugador1_guanyador: ; Mostra per pantalla que el jug1 ha guanyat i pregunta si volen tornar a jugar
+
+        MOVH R0, BYTEALTO DIRECCION esborrar_pantalla
+        MOVL R0, BYTEBAJO DIRECCION esborrar_pantalla
+        CALL R0
+        
+        MOV R0, R6
+        MOVH R1 , BYTEALTO DIRECCION missatge_felicitats
+        MOVL R1 , BYTEBAJO DIRECCION missatge_felicitats
+        MOVH R2, 00
+        MOVL R2, 17 ; 1 * 15 + 2
+        ADD R0, R0, R2
+        MOVH R2, BYTEALTO DIRECCION escriure_text
+        MOVL R2, BYTEBAJO DIRECCION escriure_text
+        CALL R2
+
+        MOV R0, R6
+        MOVH R1 , BYTEALTO DIRECCION nom_jugador1
+        MOVL R1 , BYTEBAJO DIRECCION nom_jugador1
+        MOVH R2, 00
+        MOVL R2, 47 ; 3 * 15 + 2
+        ADD R0, R0, R2
+
+        MOVH R2, BYTEALTO DIRECCION escriure_text
+        MOVL R2, BYTEBAJO DIRECCION escriure_text
+        CALL R2
+
+        CALL tornar_jugar
+
+    jugador2_guanyador: ; Mostra per pantalla que el jug2 ha guanyat i pregunta si volen tornar a jugar
+
+        MOVH R0, BYTEALTO DIRECCION esborrar_pantalla
+        MOVL R0, BYTEBAJO DIRECCION esborrar_pantalla
+        CALL R0
+
+        MOV R0, R6
+        MOVH R1 , BYTEALTO DIRECCION missatge_felicitats
+        MOVL R1 , BYTEBAJO DIRECCION missatge_felicitats
+        MOVH R2, 00
+        MOVL R2, 17 ; 1 * 15 + 2
+        ADD R0, R0, R2
+        MOVL R2, BYTEBAJO DIRECCION escriure_text
+        MOVH R2, BYTEALTO DIRECCION escriure_text
+        CALL R2
+
+        MOV R0, R6
+        MOVH R1 , BYTEALTO DIRECCION nom_jugador2
+        MOVL R1 , BYTEBAJO DIRECCION nom_jugador2
+        MOVH R2, 00
+        MOVL R2, 47 ; 3 * 15 + 2
+        ADD R0, R0, R2
+
+        MOVH R2, BYTEALTO DIRECCION escriure_text
+        MOVL R2, BYTEBAJO DIRECCION escriure_text
+        CALL R2
+        CALL tornar_jugar
+
+    tornar_jugar: ; Pregunta si volen tornar a jugar
+
+        MOVH R0, BYTEALTO DIRECCION neteja_teclat
+        MOVL R0, BYTEBAJO DIRECCION neteja_teclat
+        CALL R0
+
+        MOV R0, R6
+        MOVH R1 , BYTEALTO DIRECCION missatge_nova_partida
+        MOVL R1 , BYTEBAJO DIRECCION missatge_nova_partida
+        MOVH R2, 00
+        MOVL R2, 77 ; 5 * 15 + 2
+        ADD R0, R0, R2
+        MOVH R3, BYTEALTO DIRECCION escriure_text
+        MOVL R3, BYTEBAJO DIRECCION escriure_text
+        CALL R3
+
+        MOV R0, R6
+        MOVH R1 , BYTEALTO DIRECCION missatge_confirmacio
+        MOVL R1 , BYTEBAJO DIRECCION missatge_confirmacio
+        MOVH R2, 00
+        MOVL R2, 95 ; 6 * 15 + 5
+        ADD R0, R0, R2
+        MOVH R3, BYTEALTO DIRECCION escriure_text
+        MOVL R3, BYTEBAJO DIRECCION escriure_text
+
+        CALL R3
+        MOVH R4, 0fh ; y/Y
+        MOVL R4, 00h
+        MOVH R5, BYTEALTO DIRECCION llegir_fila
+        MOVL R5, BYTEBAJO DIRECCION llegir_fila
+        CALL R5
+        MOVL R3, 0000h ; Així funciona tant en majus com no
+        COMP R3, R4 ; Si no escriu y o Y acaba
+        BRZ reiniciar_valors
+        JMP fi
+    
+    reiniciar_valors: ; Si es vol tornar a jugar reinicia els valor que hi ha a memòria
+
+        MOVH R0, BYTEALTO DIRECCION fila1
+        MOVL R0, BYTEBAJO DIRECCION fila1
+        MOVH R1, 00
+        MOVL R1, 09
+        XOR R2, R2, R2
+        
+        bucle_reiniciar:
+            MOV [R0], R2
+            INC R0
+            DEC R1
+            BRNZ bucle_reiniciar
+
+        MOVH R3, BYTEALTO DIRECCION pintar_fons_caselles ; Tornar a jugar
+        MOVL R3, BYTEBAJO DIRECCION pintar_fons_caselles
+        JMP R3
+            
+fi:
+
+    MOVH R0, BYTEALTO DIRECCION neteja_teclat
+    MOVL R0, BYTEBAJO DIRECCION neteja_teclat
+    CALL R0
+    MOVH R0, BYTEALTO DIRECCION esborrar_pantalla
+    MOVL R0, BYTEBAJO DIRECCION esborrar_pantalla
+    CALL R0
+    FIN
