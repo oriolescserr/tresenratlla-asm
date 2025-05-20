@@ -1,11 +1,12 @@
 # Pràctica 2 - Joc del Tres en Ratlla (Simulador Von Neumann)
 
-**Assignatura:** Estructura de Computadors 2  
-**Quadrimestre:** 2n, Curs 2024/25  
-Grau: Enginyeria Informàtica (Universitat de Lleida - Campus Igualada)  
+**Assignatura:** Estructura de Computadors 2   
+**Grau:** 1r any d’Enginyeria Informàtica (Universitat de Lleida - Campus Igualada)  
+**Curs acadèmic:** 2024/25 — 2n quadrimestre  
 **Alumne:** Oriol Escolà Serra  
-**Nota obtinguda:** 10/10
+**Nota obtinguda:** 10/10  
 **Pes a l’assignatura:** 15%
+
 
 ## Objectiu
 
@@ -50,7 +51,6 @@ Desenvolupar un programa en llenguatge ensamblador per al Simulador KIT Von Neum
 Oriol Escolà Serra  
 Estudiant d’Enginyeria Informàtica  
 Universitat de Lleida – Campus Igualada  
-LinkedIn: https://www.linkedin.com/in/oriolescserr
 
 ## Llicència
 
