@@ -1,5 +1,5 @@
 <p align="left">
-   <a href="https://www.insigualada.cat](https://www.eps.udl.cat/ca/" target="_blank">
+   <a href="https://www.eps.udl.cat/ca/" target="_blank">
      <img src="https://os-gei-udl-2526-105012.github.io/course/figures/corporative/institute.png" width="150"/>
    </a>
 </p>
